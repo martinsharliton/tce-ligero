@@ -1,0 +1,444 @@
+# --
+# Copyright (C) 2001-2020 OTRS AG, https://otrs.com/
+# --
+# This software comes with ABSOLUTELY NO WARRANTY. For details, see
+# the enclosed file COPYING for license information (GPL). If you
+# did not receive this file, see https://www.gnu.org/licenses/gpl-3.0.txt.
+# --
+
+package Kernel::GenericInterface::Operation::ConfigItem::ConfigItemGet;
+
+use strict;
+use warnings;
+
+## nofilter(TidyAll::Plugin::OTRS::Migrations::OTRS6::SysConfig)
+
+use MIME::Base64;
+use Kernel::System::VariableCheck qw(:all);
+
+use parent qw(
+    Kernel::GenericInterface::Operation::Common
+    Kernel::GenericInterface::Operation::ConfigItem::Common
+);
+
+our $ObjectManagerDisabled = 1;
+
+=head1 NAME
+
+Kernel::GenericInterface::Operation::ConfigItem::ConfigItemGet - GenericInterface Configuration Item Get Operation backend
+
+=head1 PUBLIC INTERFACE
+
+=head2 new()
+
+usually, you want to create an instance of this
+by using Kernel::GenericInterface::Operation->new();
+
+=cut
+
+sub new {
+    my ( $Type, %Param ) = @_;
+
+    my $Self = {};
+    bless( $Self, $Type );
+
+    # check needed objects
+    for my $Needed (qw( DebuggerObject WebserviceID )) {
+        if ( !$Param{$Needed} ) {
+            return {
+                Success      => 0,
+                ErrorMessage => "Got no $Needed!",
+            };
+        }
+
+        $Self->{$Needed} = $Param{$Needed};
+    }
+
+    $Self->{OperationName} = 'ConfigItemGet';
+
+    $Self->{Config} = $Kernel::OM->Get('Kernel::Config')->Get('GenericInterface::Operation::ConfigItemGet');
+
+    return $Self;
+}
+
+=head2 Run()
+
+perform ConfigItemGet Operation. This function is able to return
+one or more ConfigItem entries in one call.
+
+    my $Result = $OperationObject->Run(
+        Data => {
+            UserLogin         => 'some agent login',                            # UserLogin or SessionID is
+            SessionID         => 123,                                           #   required
+            Password          => 'some password',                               # if UserLogin is sent then Password is required
+            ConfigItemID      => '32,33',                                       # required, could be coma separated IDs or an Array
+            Attachments       => 1,                                             # Optional, 1 as default. If it's set with the value 1,
+                                                                                # attachments for articles will be included on ConfigItem data
+        },
+    );
+
+    $Result = {
+        Success      => 1,                                # 0 or 1
+        ErrorMessage => '',                               # In case of an error
+        Data         => {
+            ConfigItem => [
+                {
+
+                    Number             => '20101027000001',
+                    ConfigItemID       => 123,
+                    Name               => 'some name',
+                    Class              => 'some class',
+                    VersionID          => 123,
+                    LastVersionID      => 123,
+                    DefinitionID       => 123,
+                    InciState          => 'some incident state',
+                    InciStateType      => 'some incident state type',
+                    DeplState          => 'some deployment state',
+                    DeplStateType      => 'some deployment state type',
+                    CurInciState       => 'some incident state',
+                    CurInciStateType   => 'some incident state type',
+                    CurDeplState       => 'some deployment state',
+                    CurDeplStateType   => 'some deployment state type',
+                    CreateTime         => '2010-10-27 20:15:00'
+                    CreateBy           => 123,
+                    CIXMLData          => $XMLDataHashRef,
+
+                    Attachment => [
+                        {
+                            Content            => "xxxx",     # actual attachment contents, base64 enconded
+                            ContentType        => "application/pdf",
+                            Filename           => "StdAttachment-Test1.pdf",
+                            Filesize           => "4.6 KBytes",
+                            Preferences        => $PreferencesHashRef,
+                        },
+                        {
+                           # . . .
+                        },
+                    ],
+                },
+                {
+                    # . . .
+                },
+            ],
+        },
+    };
+
+=cut
+
+=pod
+@api {post} /cmdb/get Config item get api
+@apiName Get
+@apiGroup Cmdb
+@apiVersion 1.0.0
+
+@apiExample Example usage:
+  {
+    "SessionID": "PT24BIG8onB5D5J5nw7I3yPnLgAonxfn",
+    "ConfigItemID": "1,3",
+    "Attachments": 1
+  }
+
+@apiParam (Request body) {String} [UserLogin] User login to create sesssion.
+@apiParam (Request body) {String} [Password] Password to create session.
+@apiParam (Request body) {String} SessionID session id generated by session create method.
+@apiParam (Request body) {String} ConfigItemID List of cmdb id separated by comma.
+@apiParam (Request body) {Integer="0","1"} [Attachments] Flag to indicate if return attachments (default is 0).
+
+@apiErrorExample {json} Error example:
+  HTTP/1.1 200 Success
+  {
+    "Error": {
+      "ErrorCode": "ConfigItemGet.MissingParameter",
+      "ErrorMessage": "ConfigItemGet: ConfigItemID parameter is missing!"
+    }
+  }
+@apiSuccessExample {json} Success example:
+  HTTP/1.1 200 Success
+  {
+    "ConfigItem": [
+      {
+        "CurDeplStateType": "productive",
+        "LastVersionID": 1,
+        "CurInciStateType": "operational",
+        "Number": "1022000001",
+        "VersionID": "1",
+        "InciState": "Operational",
+        "CurInciState": "Operational",
+        "CreateBy": 1,
+        "CurDeplState": "Production",
+        "Attachment": "",
+        "DeplState": "Production",
+        "CreateTime": "2021-05-26 15:53:39",
+        "Class": "Computer",
+        "DefinitionID": 1,
+        "DeplStateType": "productive",
+        "Name": "Teste do Ricardo",
+        "CIXMLData": {
+          "NIC": {
+            "NIC": "Teste",
+            "IPoverDHCP": "Yes"
+          },
+          "CustomerID": "",
+          "Owner": "",
+          "WarrantyExpirationDate": "2021-05-26",
+          "Vendor": "",
+          "Description": "",
+          "Type": "",
+          "OperatingSystem": "",
+          "Model": "",
+          "CPU": "",
+          "GraphicAdapter": "",
+          "FQDN": "",
+          "SerialNumber": "",
+          "Ram": "",
+          "HardDisk": {
+            "HardDisk": "",
+            "Capacity": ""
+          }
+        },
+        "InciStateType": "operational",
+        "ConfigItemID": "1"
+      },
+      {
+        "DefinitionID": 1,
+        "DeplStateType": "productive",
+        "Name": "The name",
+        "CIXMLData": {
+          "NIC": {
+            "NIC": "Teste",
+            "IPoverDHCP": "Yes"
+          }
+        },
+        "InciStateType": "operational",
+        "ConfigItemID": "3",
+        "InciState": "Operational",
+        "CurInciState": "Operational",
+        "CreateBy": 1,
+        "CurDeplState": "Production",
+        "DeplState": "Production",
+        "Attachment": [
+          {
+            "Filename": "text.txt",
+            "Type": "attachment",
+            "Preferences": {
+              "ContentType": "plain/text",
+              "ConfigItemID": "3",
+              "UserID": "1",
+              "ContentID": null,
+              "FilesizeRaw": "3"
+            },
+            "Filesize": "3",
+            "ContentType": "plain/text",
+            "Content": "test\n"
+          }
+        ],
+        "Class": "Computer",
+        "CreateTime": "2021-05-26 20:07:06",
+        "VersionID": "3",
+        "CurDeplStateType": "productive",
+        "LastVersionID": 3,
+        "CurInciStateType": "operational",
+        "Number": "111"
+      }
+    ]
+  }
+
+@apiSuccess {Array} ConfigItem List of Cmdb found.
+=cut
+sub Run {
+    my ( $Self, %Param ) = @_;
+
+    my $Result = $Self->Init(
+        WebserviceID => $Self->{WebserviceID},
+    );
+
+    if ( !$Result->{Success} ) {
+        $Self->ReturnError(
+            ErrorCode    => 'Webservice.InvalidConfiguration',
+            ErrorMessage => $Result->{ErrorMessage},
+        );
+    }
+
+    my ( $UserID, $UserType ) = $Self->Auth(
+        %Param
+    );
+
+    if ( !$UserID ) {
+        return $Self->ReturnError(
+            ErrorCode    => '$Self->{OperationName}.AuthFail',
+            ErrorMessage => "$Self->{OperationName}: Authorization failing!",
+        );
+    }
+
+    # check needed stuff
+    for my $Needed (qw(ConfigItemID)) {
+        if ( !$Param{Data}->{$Needed} ) {
+            return $Self->ReturnError(
+                ErrorCode    => "$Self->{OperationName}.MissingParameter",
+                ErrorMessage => "$Self->{OperationName}: $Needed parameter is missing!",
+            );
+        }
+    }
+    my $ErrorMessage = '';
+
+    # all needed variables
+    my @ConfigItemIDs;
+    if ( IsStringWithData( $Param{Data}->{ConfigItemID} ) ) {
+        @ConfigItemIDs = split( /,/, $Param{Data}->{ConfigItemID} );
+    }
+    elsif ( IsArrayRefWithData( $Param{Data}->{ConfigItemID} ) ) {
+        @ConfigItemIDs = @{ $Param{Data}->{ConfigItemID} };
+    }
+    else {
+        return $Self->ReturnError(
+            ErrorCode    => "$Self->{OperationName}.WrongStructure",
+            ErrorMessage => "$Self->{OperationName}: Structure for ConfigItemID is not correct!",
+        );
+    }
+    my $Attachments = $Param{Data}->{Attachments} || 0;
+    my $ReturnData  = {
+        Success => 1,
+    };
+
+    my @Item;
+
+    my $ConfigItemObject = $Kernel::OM->Get('Kernel::System::ITSMConfigItem');
+
+    # start ConfigItem loop
+    CONFIGITEM:
+    for my $ConfigItemID (@ConfigItemIDs) {
+
+        # check create permissions
+        my $Permission = $ConfigItemObject->Permission(
+            Scope  => 'Item',
+            ItemID => $ConfigItemID,
+            UserID => $UserID,
+            Type   => $Self->{Config}->{Permission},
+        );
+
+        if ( !$Permission ) {
+            return $Self->ReturnError(
+                ErrorCode    => "$Self->{OperationName}.AccessDenied",
+                ErrorMessage => "$Self->{OperationName}: Can not get configuration item!",
+            );
+        }
+
+        # get the ConfigItem entry
+        my $ConfigItem = $ConfigItemObject->ConfigItemGet(
+            ConfigItemID => $ConfigItemID,
+            UserID       => $UserID,
+        );
+
+        # get latest version
+        my $Version = $ConfigItemObject->VersionGet(
+            ConfigItemID => $ConfigItemID,
+            UserID       => $UserID,
+        );
+
+        if ( !IsHashRefWithData($Version) ) {
+
+            $ErrorMessage = 'Could not get ConfigItem data'
+                . ' in Kernel::GenericInterface::Operation::ConfigItem::ConfigItemGet::Run()';
+
+            return $Self->ReturnError(
+                ErrorCode    => '$Self->{OperationName}.InvalidParameter',
+                ErrorMessage => "$Self->{OperationName}: $ErrorMessage",
+            );
+        }
+
+        # remove unneeded items
+        delete $Version->{ClassID};
+        delete $Version->{CurDeplStateID};
+        delete $Version->{CurInciStateID};
+        delete $Version->{DeplStateID};
+        delete $Version->{InciStateID};
+        delete $Version->{XMLDefinitionID};
+
+        my $Definition = delete $Version->{XMLDefinition};
+
+        my $FormatedXMLData = $Self->InvertFormatXMLData(
+            XMLData => $Version->{XMLData}->[1]->{Version},
+        );
+
+        my $ReplacedXMLData = $Self->InvertReplaceXMLData(
+            XMLData    => $FormatedXMLData,
+            Definition => $Definition,
+        );
+
+        $Version->{XMLData} = $ReplacedXMLData;
+
+        # rename XMLData since SOAP transport complains about XML prefix on names
+        $Version->{CIXMLData} = delete $Version->{XMLData};
+
+        # set ConfigItem entry data
+        my $ConfigItemBundle = $Version;
+
+        if ($Attachments) {
+
+            my @Attachments = $ConfigItemObject->ConfigItemAttachmentList(
+                ConfigItemID => $ConfigItemID,
+            );
+
+            my @AttachmentDetails;
+            ATTACHMENT:
+            for my $Filename (@Attachments) {
+
+                next ATTACHMENT if !$Filename;
+
+                my $Attachment = $ConfigItemObject->ConfigItemAttachmentGet(
+                    ConfigItemID => $ConfigItemID,
+                    Filename     => $Filename,
+                );
+
+                # next if not attachment
+                next ATTACHMENT if !IsHashRefWithData($Attachment);
+
+                # convert content to base64
+                $Attachment->{Content} = encode_base64( $Attachment->{Content} );
+                push @AttachmentDetails, $Attachment;
+            }
+
+            # set ConfigItem entry data
+            $ConfigItemBundle->{Attachment} = '';
+            if ( IsArrayRefWithData( \@AttachmentDetails ) ) {
+                $ConfigItemBundle->{Attachment} = \@AttachmentDetails;
+            }
+        }
+
+        # add
+        push @Item, $ConfigItemBundle;
+
+    }    # finish ConfigItem loop
+
+    if ( !scalar @Item ) {
+        $ErrorMessage = 'Could not get ConfigItem data'
+            . ' in Kernel::GenericInterface::Operation::ConfigItem::ConfigItemGet::Run()';
+
+        return $Self->ReturnError(
+            ErrorCode    => '$Self->{OperationName}.NoConfigItemData',
+            ErrorMessage => "$Self->{OperationName}: $ErrorMessage",
+        );
+
+    }
+
+    # set ConfigItem data into return structure
+    $ReturnData->{Data}->{ConfigItem} = '';
+    if ( IsArrayRefWithData( \@Item ) ) {
+        $ReturnData->{Data}->{ConfigItem} = \@Item;
+    }
+
+    # return result
+    return $ReturnData;
+}
+
+1;
+
+=head1 TERMS AND CONDITIONS
+
+This software is part of the OTRS project (L<https://otrs.org/>).
+
+This software comes with ABSOLUTELY NO WARRANTY. For details, see
+the enclosed file COPYING for license information (GPL). If you
+did not receive this file, see L<https://www.gnu.org/licenses/gpl-3.0.txt>.
+
+=cut
